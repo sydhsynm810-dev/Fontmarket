@@ -1,4 +1,136 @@
 import asyncio
+import aiosqlite
+import random
+import string
+import threading
+
+from flask import Flask
+from aiogram import Bot, Dispatcher, F
+from aiogram.types import (
+    Message,
+    ReplyKeyboardMarkup,
+    KeyboardButton
+)
+from aiogram.filters import CommandStart
+
+from config import BOT_TOKEN, ADMIN_ID
+
+# ========== راه‌اندازی ربات ==========
+bot = Bot(BOT_TOKEN)
+dp = Dispatcher()
+DB = "database.db"
+
+# ========== وب‌سرور برای UptimeRobot ==========
+web_app = Flask(__name__)
+
+@web_app.route('/')
+def home():
+    return "ربات زنده است! 🤖"
+
+def run_webserver():
+    web_app.run(host='0.0.0.0', port=8080)
+
+# ========== کیبوردها ==========
+user_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📂 دریافت فایل")],
+        [KeyboardButton(text="👤 حساب کاربری")],
+        [KeyboardButton(text="📞 پشتیبانی")],
+        [KeyboardButton(text="ℹ️ درباره ما")]
+    ],
+    resize_keyboard=True
+)
+
+verify_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📱 ارسال شماره", request_contact=True)]
+    ],
+    resize_keyboard=True
+)
+
+admin_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="📤 آپلود فایل")],
+        [KeyboardButton(text="👥 کاربران")]
+    ],
+    resize_keyboard=True
+)
+
+# ========== دیتابیس ==========
+async def init_db():
+    async with aiosqlite.connect(DB) as db:
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS users(
+                user_id INTEGER PRIMARY KEY,
+                phone TEXT
+            )
+        """)
+        await db.execute("""
+            CREATE TABLE IF NOT EXISTS files(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                code TEXT,
+                file_id TEXT
+            )
+        """)
+        await db.commit()
+
+def create_code():
+    chars = string.ascii_letters + string.digits
+    return "".join(random.choice(chars) for _ in range(8))
+
+# ========== دستورات ربات ==========
+@dp.message(CommandStart())
+async def start(message: Message):
+    args = message.text.split()
+
+    # دریافت فایل با لینک اختصاصی
+    if len(args) > 1:
+        code = args[1]
+        async with aiosqlite.connect(DB) as db:
+            cur = await db.execute("SELECT file_id FROM files WHERE code=?", (code,))
+            file = await cur.fetchone()
+
+        if file:
+            await message.answer_document(file[0])
+        else:
+            await message.answer("❌ فایل پیدا نشد")
+        return
+
+    async with aiosqlite.connect(DB) as db:
+        cur = await db.execute("SELECT phone FROM users WHERE user_id=?", (message.from_user.id,))
+        user = await cur.fetchone()
+
+    if not user:
+        await message.answer(
+            "🔐 برای استفاده از ربات ابتدا شماره خود را ارسال کنید:",
+            reply_markup=verify_keyboard
+        )
+        return
+
+    if message.from_user.id == ADMIN_ID:
+        await message.answer("👨‍💻 پنل مدیریت", reply_markup=admin_keyboard)
+    else:
+        await message.answer("🌟 خوش آمدید", reply_markup=user_keyboard)
+
+# ========== احراز هویت شماره ==========
+@dp.message(F.contact)
+async def verify_phone(message: Message):
+    if message.contact.user_id != message.from_user.id:
+        await message.answer("❌ لطفاً شماره خودتان را ارسال کنید")
+        return
+
+    phone = message.contact.phone_number.replace(" ", "")
+
+    if phone.startswith("0098"):
+        phone = "+" + phone[2:]
+    elif phone.startswith("98"):
+        phone = "+" + phone
+
+    if not phone.startswith("+98"):
+        await message.answer("❌ فقط شماره ایران مجاز است")
+        return
+
+    async with aiosqlite.connect(DB) as db:
 
 import aiosqlite
 
@@ -100,7 +232,7 @@ admin_keyboard = ReplyKeyboardMarkup(
 
     [KeyboardButton(text="📤 آپلود فایل")],
 
-    [KeyboardButton(text="👥 کاربران")]
+    [KeyboardBuon(text="👥 کاربران")]
 
   ],
 
