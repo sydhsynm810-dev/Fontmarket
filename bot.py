@@ -20,7 +20,7 @@ bot = Bot(BOT_TOKEN)
 dp = Dispatcher()
 DB = "database.db"
 
-# ========== وب‌سرور برای UptimeRobot ==========
+# ========== وب‌سرور برای Render ==========
 web_app = Flask(__name__)
 
 @web_app.route('/')
@@ -34,8 +34,8 @@ def run_webserver():
 user_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="📂 دریافت فایل")],
-        [KeyboardButton(text="👤 حساب کاربری")],
-        [KeyboardButton(text="📞 پشتیبانی")],
+        [KeyboardButton(text="👤 حساب کاربری"), KeyboardButton(text="⭐ VIP")],
+        [KeyboardButton(text="📞 پشتیبانی"), KeyboardButton(text="✏️ درخواست فونت")],
         [KeyboardButton(text="ℹ️ درباره ما")]
     ],
     resize_keyboard=True
@@ -83,6 +83,7 @@ def create_code():
 async def start(message: Message):
     args = message.text.split()
 
+    # دریافت فایل با لینک اختصاصی
     if len(args) > 1:
         code = args[1]
         async with aiosqlite.connect(DB) as db:
@@ -95,6 +96,7 @@ async def start(message: Message):
             await message.answer("❌ فایل پیدا نشد")
         return
 
+    # بررسی احراز هویت
     async with aiosqlite.connect(DB) as db:
         cur = await db.execute("SELECT phone FROM users WHERE user_id=?", (message.from_user.id,))
         user = await cur.fetchone()
@@ -106,6 +108,7 @@ async def start(message: Message):
         )
         return
 
+    # پنل مدیریت یا کاربر عادی
     if message.from_user.id == ADMIN_ID:
         await message.answer("👨‍💻 پنل مدیریت", reply_markup=admin_keyboard)
     else:
@@ -136,7 +139,10 @@ async def verify_phone(message: Message):
         )
         await db.commit()
 
-    await message.answer("✅ احراز هویت با موفقیت انجام شد", reply_markup=user_keyboard)
+    await message.answer(
+        "✅ احراز هویت با موفقیت انجام شد",
+        reply_markup=user_keyboard
+    )
 
 # ========== آپلود فایل ادمین ==========
 @dp.message(F.document)
@@ -191,6 +197,38 @@ async def account(message: Message):
         f"🆔 آیدی: {message.from_user.id}\n"
         f"📱 شماره: {user[0] if user else 'ثبت نشده'}\n"
         f"👤 نام: {message.from_user.full_name}"
+    )
+
+# ========== VIP ==========
+@dp.message(F.text == "⭐ VIP")
+async def vip(message: Message):
+    await message.answer(
+        "👑 **عضویت ویژه VIP**\n\n"
+        "مزایای عضویت VIP:\n"
+        "✅ دانلود نامحدود فایل‌ها\n"
+        "✅ دسترسی به فونت‌های اختصاصی\n"
+        "✅ پشتیبانی ویژه\n"
+        "✅ تخفیف ۳۰٪ برای همه محصولات\n\n"
+        "💰 هزینه عضویت: ۵۰,۰۰۰ تومان (مادام‌العمر)\n\n"
+        "برای ثبت‌نام، با پشتیبانی تماس بگیرید:\n"
+        "📞 @Font1403_Support"
+    )
+
+# ========== درخواست فونت ==========
+@dp.message(F.text == "✏️ درخواست فونت")
+async def request_font(message: Message):
+    await message.answer(
+        "✏️ **درخواست فونت جدید**\n\n"
+        "اگر فونتی مد نظرت هست که در مجموعه ما نیست، می‌تونی درخواست بدی.\n\n"
+        "📝 لطفاً مشخصات فونت مورد نظرت رو به صورت زیر برای ما ارسال کن:\n"
+        "```\n"
+        "نام فونت: \n"
+        "سبک: (ساده/کامل/تزئینی/خط)\n"
+        "کاربرد: (طراحی/چاپ/وب/موبایل)\n"
+        "توضیحات بیشتر: \n"
+        "```\n\n"
+        "📎 درخواست خود را به آیدی زیر ارسال کن:\n"
+        "@Font1403_Request"
     )
 
 # ========== پشتیبانی ==========
