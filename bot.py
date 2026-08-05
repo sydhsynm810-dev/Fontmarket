@@ -240,6 +240,7 @@ async def support(message: Message):
         "https://t.me/XBCHATBot?start=sec-bgcabcgba"
     )
 
+
 # ========== درباره ما ==========
 @dp.message(F.text == "ℹ️ درباره ما")
 async def about(message: Message):
